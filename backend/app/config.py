@@ -40,3 +40,5 @@ if settings.hf_endpoint:
 # 模型缓存放到 D 盘，避免占用 C 盘
 if settings.hf_home:
     os.environ.setdefault("HF_HOME", settings.hf_home)
+# 禁用 Xet 加速下载（否则会绕过镜像直连 AWS CDN，国内超时）
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
