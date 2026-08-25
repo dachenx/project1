@@ -68,9 +68,6 @@ export default function Login() {
             {mode === 'login' ? '登录' : '注册'}
           </Button>
         </Form>
-        <p style={{ marginTop: 16, color: '#999', fontSize: 12 }}>
-          管理员默认账号：admin / 123456
-        </p>
       </Card>
     </div>
   )

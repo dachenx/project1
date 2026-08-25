@@ -41,7 +41,14 @@ def delete_vectorstore(kb_id: int | None = None) -> None:
 
 def retrieve(query: str, kb_id: int | None = None, top_k: int | None = None) -> list[dict]:
     k = top_k or settings.retrieval_top_k
-    docs = get_vectorstore(kb_id).similarity_search(query, k=k)
+    vs = get_vectorstore(kb_id)
+    threshold = settings.retrieval_score_threshold
+    if threshold is not None:
+        # 带分数检索，过滤掉相似度过低（L2 距离过大）的无关片段
+        hits = vs.similarity_search_with_score(query, k=max(k * 3, 10))
+        docs = [d for d, dist in hits if dist <= threshold][:k]
+    else:
+        docs = vs.similarity_search(query, k=k)
     return [
         {
             "content": d.page_content,

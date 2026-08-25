@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     # Retrieval
     retrieval_top_k: int = 4
+    # 检索相关度阈值（L2 距离，越小越相关；None 表示不过滤）。
+    # bge-m3 归一化后：命中商品约 0.55-0.75，无关内容约 >0.9。
+    retrieval_score_threshold: float | None = 0.75
 
 
 settings = Settings()
