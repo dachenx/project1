@@ -1,15 +1,21 @@
 import json
+import logging
+import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..core.limiter import limiter
 from ..database import SessionLocal, get_db
 from ..deps import get_current_user
 from ..models import Conversation, Message, User
 from ..services import rag
+from ..services.cache import answer_cache, cache_key
 from ..services.llm import get_llm
+
+logger = logging.getLogger("rag.chat")
 
 router = APIRouter()
 
@@ -20,9 +26,11 @@ class ChatIn(BaseModel):
 
 
 @router.post("/{conversation_id}")
+@limiter.limit("10/minute")
 async def chat(
     conversation_id: int,
     body: ChatIn,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -50,20 +58,43 @@ async def chat(
     )
     history = [{"role": m.role, "content": m.content} for m in reversed(recent)][:-1]
 
-    # 3. 检索 + 构建 prompt
-    citations = rag.retrieve(body.question, body.kb_id)
-    prompt = rag.build_prompt(body.question, citations, history)
-    llm = get_llm(streaming=True)
+    ckey = cache_key(body.kb_id, body.question)
+    cached = answer_cache.get(ckey)
 
     async def event_stream():
         full_answer = ""
+        citations = []
         try:
-            yield _sse({"type": "citations", "data": citations})
-            async for chunk in llm.astream(prompt):
-                token = getattr(chunk, "content", "") or ""
-                if token:
-                    full_answer += token
-                    yield _sse({"type": "token", "data": token})
+            if cached is not None:
+                # 命中缓存：直接返回上次的检索结果与回答
+                citations = cached["citations"]
+                full_answer = cached["answer"]
+                yield _sse({"type": "citations", "data": citations})
+                if full_answer:
+                    yield _sse({"type": "token", "data": full_answer})
+                logger.info("缓存命中 kb=%s q=%r", body.kb_id, body.question)
+            else:
+                # 3. 检索 + 构建 prompt（计时观测）
+                t0 = time.time()
+                citations = rag.retrieve(body.question, body.kb_id)
+                t_retrieve = time.time() - t0
+                prompt = rag.build_prompt(body.question, citations, history)
+                llm = get_llm(streaming=True)
+                yield _sse({"type": "citations", "data": citations})
+
+                t1 = time.time()
+                async for chunk in llm.astream(prompt):
+                    token = getattr(chunk, "content", "") or ""
+                    if token:
+                        full_answer += token
+                        yield _sse({"type": "token", "data": token})
+                t_gen = time.time() - t1
+
+                answer_cache.set(ckey, {"citations": citations, "answer": full_answer})
+                logger.info(
+                    "chat kb=%s q=%r 检索=%.3fs 生成=%.3fs 引用=%d",
+                    body.kb_id, body.question, t_retrieve, t_gen, len(citations),
+                )
 
             s = SessionLocal()
             try:

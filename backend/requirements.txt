@@ -8,6 +8,12 @@ bcrypt>=4.1
 python-multipart>=0.0.9
 python-dotenv>=1.0
 
+# 限流
+slowapi>=0.1.9
+
+# 缓存（Redis 优先，可降级内存）
+redis>=5.0
+
 # LangChain 全家桶
 langchain>=0.3
 langchain-openai>=0.2

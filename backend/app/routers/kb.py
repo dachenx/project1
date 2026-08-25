@@ -19,6 +19,16 @@ router = APIRouter()
 ALLOWED_EXT = {".pdf", ".docx", ".txt", ".md", ".csv"}
 
 
+def _validate_file_signature(ext: str, head: bytes) -> None:
+    """校验文件头与扩展名是否匹配，防止上传伪装文件。"""
+    if ext == ".pdf" and not head.startswith(b"%PDF"):
+        raise HTTPException(status_code=400, detail="文件内容不是有效的 PDF")
+    if ext == ".docx" and not head.startswith(b"PK"):
+        raise HTTPException(status_code=400, detail="文件内容不是有效的 Word 文档")
+    if ext in {".txt", ".md", ".csv"} and b"\x00" in head:
+        raise HTTPException(status_code=400, detail="文本文件包含二进制内容，无法解析")
+
+
 def process_document(doc_id: int) -> None:
     """后台任务：解析 → 分块 → 向量化 → 入库。"""
     db = SessionLocal()
@@ -86,6 +96,12 @@ async def upload_document(
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in ALLOWED_EXT:
         raise HTTPException(status_code=400, detail=f"不支持的文件格式：{ext}")
+
+    # 内容校验：读取文件头确认与扩展名匹配，防止伪装文件
+    file.file.seek(0)
+    head = file.file.read(1024)
+    file.file.seek(0)
+    _validate_file_signature(ext, head)
 
     os.makedirs(settings.upload_dir, exist_ok=True)
     stored_name = f"{uuid.uuid4().hex}{ext}"

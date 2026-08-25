@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     chroma_dir: str = "./data/chroma"
     upload_dir: str = "./data/uploads"
 
+    # Cache（Redis 优先，连接失败自动降级为内存缓存）
+    redis_url: str = "redis://localhost:6379/0"
+
     # Security
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"

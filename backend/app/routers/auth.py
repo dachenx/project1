@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from ..core.limiter import limiter
 from ..core.security import create_access_token, hash_password, verify_password
 from ..database import get_db
 from ..deps import get_current_user
@@ -11,7 +12,8 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
-def register(body: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def register(body: UserCreate, request: Request, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == body.username).first():
         raise HTTPException(status_code=400, detail="用户名已存在")
     if not body.username.strip() or not body.password:
@@ -24,7 +26,8 @@ def register(body: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenOut)
-def login(body: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def login(body: UserCreate, request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == body.username).first()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
