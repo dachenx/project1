@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     # Embedding
     embedding_model: str = "BAAI/bge-m3"
     hf_endpoint: str = "https://hf-mirror.com"  # 国内 HuggingFace 镜像，海外可留空
+    hf_home: str = "D:\\develop\\huggingface"  # 模型缓存目录（默认 C 盘，改到 D 盘）
 
     # Storage
     database_url: str = "sqlite:///./data/app.db"
@@ -36,3 +37,6 @@ settings = Settings()
 # 国内访问 huggingface.co 慢，自动切到镜像（下载 BGE 模型用）
 if settings.hf_endpoint:
     os.environ.setdefault("HF_ENDPOINT", settings.hf_endpoint)
+# 模型缓存放到 D 盘，避免占用 C 盘
+if settings.hf_home:
+    os.environ.setdefault("HF_HOME", settings.hf_home)
