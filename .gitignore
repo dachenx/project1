@@ -32,3 +32,6 @@ frontend/.vite/
 # OS
 .DS_Store
 Thumbs.db
+
+# 个人简历素材（不进入公开仓库）
+实习经历.txt
