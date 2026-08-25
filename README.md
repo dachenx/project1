@@ -8,7 +8,7 @@
 - **RAG 问答**：检索知识库 + LLM 生成，展示引用片段、流式输出、多轮对话
 - **多用户多会话**：独立会话、历史持久化，不同时间登录可找回对话
 - **用户系统**：注册 / 登录 / 修改密码，角色权限（admin / user）
-- **企业级优化**：异步入库、结果缓存、混合检索、重排序（规划中）
+- **企业级优化**：问答结果缓存、接口限流、检索相关度过滤、上传文件校验、提示词注入加固
 
 ## 技术栈
 
@@ -33,9 +33,9 @@ rag-qa-system/
 │   │   ├── models.py        # 数据模型
 │   │   ├── schemas.py       # Pydantic 模型
 │   │   ├── deps.py          # 认证 / 权限依赖
-│   │   ├── core/security.py # 密码哈希 + JWT
+│   │   ├── core/            # security（密码哈希+JWT）/ limiter（限流）
 │   │   ├── routers/         # auth / conversations / kb / chat
-│   │   └── services/        # rag / llm / embedding / document_loader
+│   │   └── services/        # rag / llm / embedding / document_loader / cache
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/                # 前端（React + Ant Design）
@@ -72,7 +72,7 @@ python run.py
 # 后端运行在 http://127.0.0.1:8000
 ```
 
-> 首次问答 / 上传文档时，会下载 BGE 向量模型（约几百 MB），请耐心等待。
+> 首次问答 / 上传文档时，会下载 BGE 向量模型（bge-m3，约 2GB），请耐心等待。
 
 ### 2. 启动前端
 
@@ -84,6 +84,13 @@ npm run dev
 ```
 
 打开浏览器访问 <http://127.0.0.1:5173>。
+
+## 企业级优化
+
+- **结果缓存**：相同问题命中缓存后毫秒级返回。优先用 Redis（`REDIS_URL`），未启动 Redis 时自动降级为进程内存缓存。
+- **接口限流**：全局 200 次/分、问答 10 次/分、登录注册 20 次/分（slowapi）。
+- **检索相关度过滤**：按 L2 距离阈值（默认 0.75）过滤无关片段，降低答非所问。
+- **上传校验 + 提示词注入加固**：校验文件真实格式防伪装扩展名；用户输入中的越权指令一律视为普通文本。
 
 ## 默认账号
 
