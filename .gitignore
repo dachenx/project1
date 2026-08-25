@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+backend/.venv/
+
+# 环境变量与密钥
+.env
+*.env
+!.env.example
+
+# 本地运行时数据（数据库 / 向量库 / 上传文件）
+backend/data/
+backend/uploads/
+*.db
+*.sqlite3
+chroma/
+
+# Node / 前端
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

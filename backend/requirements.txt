@@ -1,0 +1,27 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+pydantic>=2.7
+pydantic-settings>=2.3
+pyjwt>=2.8
+bcrypt>=4.1
+python-multipart>=0.0.9
+python-dotenv>=1.0
+
+# LangChain 全家桶
+langchain>=0.3
+langchain-openai>=0.2
+langchain-community>=0.3
+langchain-chroma>=0.1
+langchain-text-splitters>=0.3
+langchain-huggingface>=0.1
+
+# 向量库
+chromadb>=0.5
+
+# Embedding（BGE，本地）
+sentence-transformers>=3.0
+
+# 文档解析
+pypdf>=5.0
+docx2txt>=0.8
