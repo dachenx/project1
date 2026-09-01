@@ -31,3 +31,6 @@ sentence-transformers>=3.0
 # 文档解析
 pypdf>=5.0
 docx2txt>=0.8
+
+# 测试
+pytest>=8.0
