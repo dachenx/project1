@@ -93,7 +93,10 @@ export default function Chat() {
     }
     setInput('')
     const userMsg = { role: 'user', content: question }
-    const asstMsg = { role: 'assistant', content: '', citations: [], streaming: true }
+    // 用临时唯一 id 作为稳定标识，后续流式事件靠它定位这条消息。
+    // 不能用对象引用（m === asstMsg）判断：每次 setMessages 都会生成新对象，
+    // 导致后续 token/done 事件匹配不上，界面卡在加载态。
+    const asstMsg = { role: 'assistant', content: '', citations: [], streaming: true, id: `temp-${Date.now()}` }
     setMessages((prev) => [...prev, userMsg, asstMsg])
     setStreaming(true)
 
@@ -122,22 +125,22 @@ export default function Chat() {
           const evt = JSON.parse(line)
           if (evt.type === 'citations') {
             setMessages((prev) =>
-              prev.map((m) => (m === asstMsg ? { ...m, citations: evt.data } : m)),
+              prev.map((m) => (m.id === asstMsg.id ? { ...m, citations: evt.data } : m)),
             )
           } else if (evt.type === 'token') {
             setMessages((prev) =>
-              prev.map((m) => (m === asstMsg ? { ...m, content: m.content + evt.data } : m)),
+              prev.map((m) => (m.id === asstMsg.id ? { ...m, content: m.content + evt.data } : m)),
             )
           } else if (evt.type === 'done') {
             setMessages((prev) =>
               prev.map((m) =>
-                m === asstMsg ? { ...m, id: evt.data.message_id, streaming: false } : m,
+                m.id === asstMsg.id ? { ...m, id: evt.data.message_id, streaming: false } : m,
               ),
             )
           } else if (evt.type === 'error') {
             setMessages((prev) =>
               prev.map((m) =>
-                m === asstMsg
+                m.id === asstMsg.id
                   ? { ...m, content: m.content || evt.data, streaming: false, error: true }
                   : m,
               ),
@@ -149,7 +152,7 @@ export default function Chat() {
     } catch (e) {
       setMessages((prev) =>
         prev.map((m) =>
-          m === asstMsg
+          m.id === asstMsg.id
             ? { ...m, content: m.content || String(e.message || e), streaming: false, error: true }
             : m,
         ),
